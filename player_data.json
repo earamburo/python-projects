@@ -1,0 +1,11 @@
+{
+    "color": "red",
+    "name": "ed123",
+    "job": "EXPERT PILOT",
+    "mission": "You master navigation through the dangerous real world.",
+    "outcome": "Joined the resistance",
+    "decisions": [
+        "Chose red pill",
+        "Selected job: EXPERT PILOT"
+    ]
+}
