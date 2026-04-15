@@ -40,6 +40,15 @@ def train_model(data):
         y_pred = model.predict(X)
         r2 = r2_score(y, y_pred)
 
+           
+        print("="*60)
+        print("MODEL RESULTS")
+        print("="*60)
+        print(f"Coefficient (Slope): ${model.coef_[0]:,.2f} per sqft")
+        print(f"Intercept: ${model.intercept_:,.2f}")
+        print(f"R² Score: {r2:.4f} ({r2*100:.2f}%)")
+        print(f"\nModel Equation: Price = ${model.coef_[0]:,.2f} × Size + ${model.intercept_:,.2f}\n")
+
         return model, X, y, r2
 
     except TypeError:
@@ -50,14 +59,14 @@ def train_model(data):
         return None, None, None, None
 def predict_price(model):
     try: 
-        house_size_input = input(f"Enter the house size in square feet you would like an estimate for\n")
+        house_size_input = input(f"Enter the house size in square feet you would like an estimate for:\n")
         size = float(house_size_input)
         if(size <= 0):
             print(f"House size must be positive")
             return
         predicted_price = model.predict([[size]])[0]
-        print(f"\n✅ Prediction for a {size:,.0f} sqft house:")
-        print(f"   Estimated Price: ${predicted_price:,.2f}\n")
+        print(f"\nPrediction for a {size:,.0f} sqft house:")
+        print(f"Estimated Price: ${predicted_price:,.2f}\n")
     except TypeError as e:
         print(f"{e} has occurred\n")
     except Exception as e:
