@@ -34,10 +34,12 @@ def train_model(data):
         print(f"Here is some data information\n{data.describe().astype(int)}\n")
         X = data['Size (sqft)'].values.reshape(-1, 1)
         y = data['Price ($)'].values
+        x_mean = X.mean()
+        x_centered = X - x_mean
         model = LinearRegression()
-        model.fit(X, y)
+        model.fit(x_centered, y)
 
-        y_pred = model.predict(X)
+        y_pred = model.predict(x_centered)
         r2 = r2_score(y, y_pred)
 
            
@@ -47,24 +49,31 @@ def train_model(data):
         print(f"Coefficient (Slope): ${model.coef_[0]:,.2f} per sqft")
         print(f"Intercept: ${model.intercept_:,.2f}")
         print(f"R² Score: {r2:.4f} ({r2*100:.2f}%)")
-        print(f"\nModel Equation: Price = ${model.coef_[0]:,.2f} × Size + ${model.intercept_:,.2f}\n")
+        print(f"Average house size: {x_mean:.0f} sqft")
+        print(f"\nModel Equation: Price = ${model.coef_[0]:,.2f} × (Size - {x_mean:.0f}) + ${model.intercept_:,.2f}\n")
 
-        return model, X, y, r2
+        return model, X, y, r2, x_mean, x_centered
 
     except TypeError:
         print(f"{TypeError} has occurred\n")
-        return None, None, None, None
+        return None, None, None, None, None, None
     except Exception as e:
         print(f"Error {e} has occurred")
-        return None, None, None, None
-def predict_price(model):
+        return None, None, None, None, None, None
+def predict_price(model, x_mean):
     try: 
         house_size_input = input(f"Enter the house size in square feet you would like an estimate for:\n")
-        size = float(house_size_input)
+        try: 
+            size = float(house_size_input)
+        except ValueError:
+            print(f"Error {house_size_input} is not a valid number! Please enter a numeric value\n")
+            return 
+
         if(size <= 0):
             print(f"House size must be positive")
             return
-        predicted_price = model.predict([[size]])[0]
+        size_centered = size - x_mean
+        predicted_price = model.predict([[size_centered]])[0]
         print(f"\nPrediction for a {size:,.0f} sqft house:")
         print(f"Estimated Price: ${predicted_price:,.2f}\n")
     except TypeError as e:
@@ -73,7 +82,6 @@ def predict_price(model):
         print(f"Error {e} has occurred")
 
 def visualize_data(data):
-    """Create scatter plot of the data."""
     try:
         print("="*60)
         print("CREATING VISUALIZATION")
@@ -104,12 +112,17 @@ def visualize_data(data):
     except Exception as e:
         print(f"Error creating visualization: {e}")
 
-def visualize_model(data, model, X, y):
+def visualize_model(data, model, X, y, x_mean):
     """Visualize the data points and regression line."""
     try:
         print("="*60)
         print("MODEL FIT VISUALIZATION")
         print("="*60)
+        
+        # Calculate R² score
+        x_centered = X - x_mean
+        y_pred = model.predict(x_centered)
+        r2 = r2_score(y, y_pred)
         
         plt.figure(figsize=(10, 6))
         
@@ -118,29 +131,40 @@ def visualize_model(data, model, X, y):
                    edgecolors='black', label='Actual Data', linewidth=1.5)
         
         # Plot regression line
-        plt.plot(X, model.predict(X), color='red', linewidth=2, 
+        plt.plot(X, y_pred, color='red', linewidth=2, 
                 label='Regression Line')
         
         plt.xlabel('House Size (sqft)', fontweight='bold')
         plt.ylabel('House Price ($)', fontweight='bold')
-        plt.title('Linear Regression Model Fit', fontweight='bold', pad=20)
+        plt.title('Linear Regression Model Fit (Centered)', fontweight='bold', pad=20)
         plt.grid(True, alpha=0.3)
-        plt.legend()
+        plt.legend(loc='upper left')
         
         # Format y-axis
         ax = plt.gca()
         ax.yaxis.set_major_formatter(FuncFormatter(lambda x, p: f'${x:,.0f}'))
         
+        # ADD THIS: Create text box with model statistics
+        textstr = f'Model Statistics:\n'
+        textstr += f'Slope: ${model.coef_[0]:,.2f}/sqft\n'
+        textstr += f'Intercept: ${model.intercept_:,.2f}\n'
+        textstr += f'R² Score: {r2:.4f} ({r2*100:.2f}%)'
+        
+        # Place text box in lower right corner
+        props = dict(boxstyle='round', facecolor='wheat', alpha=0.8)
+        ax.text(0.98, 0.05, textstr, transform=ax.transAxes, 
+                fontsize=10, verticalalignment='bottom', 
+                horizontalalignment='right', bbox=props)
+        
         plt.tight_layout()
         plt.savefig('regression_plot.png', dpi=300, bbox_inches='tight')
-        print("Regression plot saved as 'regression_plot.png'\n")        
+        plt.close()
         
-        print("Model fit visualization displayed!\n")
+        print("Regression plot saved as 'regression_plot.png'\n")        
+        print("Model statistics are shown in the plot!\n")
         
     except Exception as e:
         print(f"Error creating visualization: {e}")
-        return
-
 
 
 def main():
@@ -160,18 +184,16 @@ def main():
     # Visualize raw data
     visualize_data(v_data)
 
-    # Train model
-    trained = train_model(v_data)
-    if trained[0] is None:
+    # Train model   
+    model, X, y, r2, x_mean, x_centered = train_model(v_data)
+    if model is None:
         print(f"Model training failed. Try again!")
         return
-    
-    model, X, y, r2 = train_model(v_data)
 
 
-    visualize_model(v_data, model, X, y)
+    visualize_model(v_data, model, X, y, x_mean)
     while True:
-        predict_price(model)
+        predict_price(model, x_mean)
 
         again = input("Would you like to predict another price? (yes/no): ").lower()
         if again not in ['yes', 'y']:
